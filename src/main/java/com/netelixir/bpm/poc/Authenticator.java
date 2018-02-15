@@ -14,11 +14,11 @@ import com.google.api.client.auth.oauth2.Credential;
  * @author som
  */
 public class Authenticator {
-    public static String REFRESH_TOKEN = "1/0LGiMd-6eIj2SJCcnJSbdsUbPYYsyRal4AUrQulf5KaFxW07vgLU1ujJfpoPvAaM";
-    public static String CLIENT_ID = "774293531350-cams4j46618345pii2a87s9bf1i6ofn6.apps.googleusercontent.com";
-    public static String CLIENT_SECRET = "QqaK4Y4hejvvNx3etkfkrJJH";
-    public static String ADWORDS_CID = "3887595299";
-    public static String DEVELOPER_TOKEN = "RvC31uLX5bAPmUjsShJA3Q";
+    public static String REFRESH_TOKEN = "ADD_HERE";
+    public static String CLIENT_ID = "ADD HERE";
+    public static String CLIENT_SECRET = "ADD HERE";
+    public static String ADWORDS_CID = "ADD HERE";
+    public static String DEVELOPER_TOKEN = "ADD HERE";
 
     public static AdWordsSession getAdWordsSession() throws Exception {
         // Generate a refreshable OAuth2 credential.
