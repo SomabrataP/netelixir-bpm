@@ -14,6 +14,7 @@
 package com.netelixir.bpm.poc;
 
 import com.google.api.ads.adwords.axis.factory.AdWordsServices;
+import com.google.api.ads.adwords.axis.v201710.cm.Operator;
 import com.google.api.ads.adwords.lib.client.AdWordsSession;
 import com.google.api.ads.adwords.lib.client.reporting.ReportingConfiguration;
 import com.google.api.ads.adwords.lib.factory.AdWordsServicesInterface;
@@ -34,94 +35,92 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * This example downloads a criteria performance report.
+ * This example downloads a criteria performance report with AWQL.
  *
  * <p>
  * Credentials and properties in {@code fromFile()} are pulled from the
  * "ads.properties" file. See README for more info.
  */
-public class DownloadCriteriaReportWithSelector {
+public class DownloadCriteriaReportWithAwql {
+
     public static String REFRESH_TOKEN = "1/0LGiMd-6eIj2SJCcnJSbdsUbPYYsyRal4AUrQulf5KaFxW07vgLU1ujJfpoPvAaM";
     public static String CLIENT_ID = "774293531350-cams4j46618345pii2a87s9bf1i6ofn6.apps.googleusercontent.com";
-    public static String CLIENT_SECRET= "QqaK4Y4hejvvNx3etkfkrJJH";
+    public static String CLIENT_SECRET = "QqaK4Y4hejvvNx3etkfkrJJH";
     public static String ADWORDS_CID = "3887595299";
     public static String DEVELOPER_TOKEN = "RvC31uLX5bAPmUjsShJA3Q";
+
     public static void main(String[] args) throws Exception {
-        // Generate a refreshable OAuth2 credential.
-//        Credential oAuth2Credential = new OfflineCredentials.Builder()
-//                .forApi(Api.ADWORDS)
-//                .fromFile()
-//                .build()
-//                .generateCredential();
-        
-
-        Credential oAuth2Credential = new OfflineCredentials.Builder()
-                .forApi(Api.ADWORDS)
-                .withClientSecrets(CLIENT_ID, CLIENT_SECRET)
-                .withRefreshToken(REFRESH_TOKEN)
-                .build()
-                .generateCredential();
-
-        // Construct an AdWordsSession.
-//        AdWordsSession session = new AdWordsSession.Builder()
-//                .fromFile()
-//                .withOAuth2Credential(oAuth2Credential)
-//                .build();
-
-        AdWordsSession session = new AdWordsSession.Builder()
-                .fromFile()
-                .withOAuth2Credential(oAuth2Credential)
-                .withClientCustomerId(ADWORDS_CID)
-                .withDeveloperToken(DEVELOPER_TOKEN).build();
+        AdWordsSession session = Authenticator.getAdWordsSession();
 
         AdWordsServicesInterface adWordsServices = AdWordsServices.getInstance();
 
         // Location to download report to.
         String reportFile = System.getProperty("user.home") + File.separatorChar + "report.csv";
+        String reportSqrFile = System.getProperty("user.home") + File.separatorChar + "report-sqr.csv";
 
 //        runExample(adWordsServices, session, reportFile);
-        fetchReport(ReportDefinitionReportType.SEARCH_QUERY_PERFORMANCE_REPORT, ReportDefinitionDateRangeType.LAST_7_DAYS, reportFile, adWordsServices, session);
+        fetchAccountReport(ReportDefinitionReportType.KEYWORDS_PERFORMANCE_REPORT, ReportDefinitionDateRangeType.LAST_7_DAYS, reportFile, adWordsServices, session);
+        fetchKeywordLevelReport(ReportDefinitionReportType.SEARCH_QUERY_PERFORMANCE_REPORT, ReportDefinitionDateRangeType.LAST_7_DAYS, reportSqrFile, adWordsServices, session);
     }
 
-    public static void fetchReport(ReportDefinitionReportType reportType, ReportDefinitionDateRangeType dateRange, String reportFile, AdWordsServicesInterface adWordsServices, AdWordsSession session) throws Exception {
-        List<String> columns = new ArrayList();
+    public static void fetchAccountReport(ReportDefinitionReportType reportType, ReportDefinitionDateRangeType dateRange, String reportFile, AdWordsServicesInterface adWordsServices, AdWordsSession session) throws Exception {
+        String query = "";
         switch (reportType) {
             case CRITERIA_PERFORMANCE_REPORT:
-                columns = Arrays.asList("CampaignId", "AdGroupId","Id", "CriteriaType", 
-                        "Criteria","FinalUrls","Impressions","Clicks","Cost");
+                query = "SELECT CampaignId, AdGroupId,Id, CriteriaType, Criteria,FinalUrls,"
+                        + " Impressions,Clicks,Cost  FROM CRITERIA_PERFORMANCE_REPORT"
+                        + " WHERE Status IN [ENABLED]" + " DURING " + dateRange.toString();
                 break;
             case KEYWORDS_PERFORMANCE_REPORT:
-                columns = Arrays.asList("CampaignId", "CampaignName", "CampaignStatus", 
-                        "AdGroupId","AdGroupName", "AdGroupStatus", "Id", "KeywordMatchType", 
-                        "Criteria","FinalUrls","Impressions","Clicks","Cost", "Conversions", "ConversionValue");
+                query = "SELECT CampaignId, CampaignName, CampaignStatus, AdGroupId,AdGroupName, AdGroupStatus,"
+                        + " Id, KeywordMatchType, Criteria,FinalUrls,Impressions,Clicks,Cost, Conversions,"
+                        + " ConversionValue FROM KEYWORDS_PERFORMANCE_REPORT"
+                        + " WHERE Status IN [ENABLED] AND Cost >= 100000 AND Conversions < 0.01" + " DURING " + dateRange.toString();
                 break;
             case SEARCH_QUERY_PERFORMANCE_REPORT:
-                columns = Arrays.asList("CampaignId", "CampaignName", "CampaignStatus", 
-                        "AdGroupId","AdGroupName", "AdGroupStatus", 
-                        "FinalUrl","KeywordId","KeywordTextMatchingQuery", "Query", 
-                        "QueryTargetingStatus", "Impressions","Clicks","Cost");
+                query = "SELECT CampaignId, CampaignName, CampaignStatus, AdGroupId, AdGroupName,"
+                        + " AdGroupStatus, FinalUrl, KeywordId, KeywordTextMatchingQuery, Query,"
+                        + " QueryTargetingStatus, Impressions, Clicks, Cost FROM SEARCH_QUERY_PERFORMANCE_REPORT"
+                        + " DURING " + dateRange.toString();
                 break;
             default:
                 break;
         }
-        downloadReport(adWordsServices, session, reportFile, columns, dateRange, reportType);
+        downloadReport(adWordsServices, session, reportFile, query);
     }
     
+    public static void fetchKeywordLevelReport(ReportDefinitionReportType reportType, ReportDefinitionDateRangeType dateRange, String reportFile, AdWordsServicesInterface adWordsServices, AdWordsSession session) throws Exception {
+        String query = "";
+        switch (reportType) {
+            case CRITERIA_PERFORMANCE_REPORT:
+                query = "SELECT CampaignId, AdGroupId,Id, CriteriaType, Criteria,FinalUrls,"
+                        + " Impressions,Clicks,Cost  FROM CRITERIA_PERFORMANCE_REPORT"
+                        + " WHERE Status IN [ENABLED]" + " DURING " + dateRange.toString();
+                break;
+            case KEYWORDS_PERFORMANCE_REPORT:
+                query = "SELECT CampaignId, CampaignName, CampaignStatus, AdGroupId,AdGroupName, AdGroupStatus,"
+                        + " Id, KeywordMatchType, Criteria,FinalUrls,Impressions,Clicks,Cost, Conversions,"
+                        + " ConversionValue FROM KEYWORDS_PERFORMANCE_REPORT"
+                        + " WHERE Status IN [ENABLED]" + " DURING " + dateRange.toString();
+                break;
+            case SEARCH_QUERY_PERFORMANCE_REPORT:
+                query = "SELECT CampaignId, CampaignName, CampaignStatus, AdGroupId, AdGroupName,"
+                        + " AdGroupStatus, FinalUrl, KeywordId, KeywordTextMatchingQuery, Query,"
+                        + " QueryTargetingStatus, Impressions, Clicks, Cost FROM SEARCH_QUERY_PERFORMANCE_REPORT"
+                        + " WHERE KewordId IN [603308677392, 378139978798, 357106483127, 378139978958, 330711905002, 7192451082]"
+                        + " DURING " + dateRange.toString();
+                break;
+            default:
+                break;
+        }
+        downloadReport(adWordsServices, session, reportFile, query);
+    }
+
     public static void downloadReport(
-            AdWordsServicesInterface adWordsServices, AdWordsSession session, String reportFile, 
-            List<String> columns, ReportDefinitionDateRangeType dateRange, ReportDefinitionReportType reportType)
+            AdWordsServicesInterface adWordsServices, AdWordsSession session, String reportFile,
+            String query)
             throws Exception {
-        // Create selector.
-        Selector selector = new Selector();
-        selector.getFields().addAll(columns);
-
-        // Create report definition.
-        ReportDefinition reportDefinition = new ReportDefinition();
-        reportDefinition.setReportName("Criteria performance report #" + System.currentTimeMillis());
-        reportDefinition.setDateRangeType(dateRange);
-        reportDefinition.setReportType(reportType);
-        reportDefinition.setDownloadFormat(DownloadFormat.CSV);
-
+        System.out.println("Query: " + query);
         // Optional: Set the reporting configuration of the session to suppress header, column name, or
         // summary rows in the report output. You can also configure this via your ads.properties
         // configuration file. See AdWordsSession.Builder.from(Configuration) for details.
@@ -132,12 +131,10 @@ public class DownloadCriteriaReportWithSelector {
                         .skipReportHeader(false)
                         .skipColumnHeader(false)
                         .skipReportSummary(false)
-                        // Enable to allow rows with zero impressions to show.
+                        // Set to false to exclude rows with zero impressions.
                         .includeZeroImpressions(false)
                         .build();
         session.setReportingConfiguration(reportingConfiguration);
-
-        reportDefinition.setSelector(selector);
 
         ReportDownloaderInterface reportDownloader
                 = adWordsServices.getUtility(session, ReportDownloaderInterface.class);
@@ -146,7 +143,7 @@ public class DownloadCriteriaReportWithSelector {
             // Set the property api.adwords.reportDownloadTimeout or call
             // ReportDownloader.setReportDownloadTimeout to set a timeout (in milliseconds)
             // for CONNECT and READ in report downloads.
-            ReportDownloadResponse response = reportDownloader.downloadReport(reportDefinition);
+            ReportDownloadResponse response = reportDownloader.downloadReport(query, DownloadFormat.CSV);
             response.saveToFile(reportFile);
 
             System.out.printf("Report successfully downloaded to: %s%n", reportFile);
@@ -158,24 +155,11 @@ public class DownloadCriteriaReportWithSelector {
     public static void runExample(
             AdWordsServicesInterface adWordsServices, AdWordsSession session, String reportFile)
             throws Exception {
-        // Create selector.
-        Selector selector = new Selector();
-        selector.getFields().addAll(Arrays.asList("CampaignId",
-                "AdGroupId",
-                "Id",
-                "CriteriaType",
-                "Criteria",
-                "FinalUrls",
-                "Impressions",
-                "Clicks",
-                "Cost"));
-
-        // Create report definition.
-        ReportDefinition reportDefinition = new ReportDefinition();
-        reportDefinition.setReportName("Criteria performance report #" + System.currentTimeMillis());
-        reportDefinition.setDateRangeType(ReportDefinitionDateRangeType.YESTERDAY);
-        reportDefinition.setReportType(ReportDefinitionReportType.CRITERIA_PERFORMANCE_REPORT);
-        reportDefinition.setDownloadFormat(DownloadFormat.CSV);
+        // Create query.
+        String query = "SELECT CampaignId, AdGroupId, Id, Criteria, CriteriaType, "
+                + "Impressions, Clicks, Cost FROM CRITERIA_PERFORMANCE_REPORT "
+                + "WHERE Status IN [ENABLED, PAUSED] "
+                + "DURING YESTERDAY";
 
         // Optional: Set the reporting configuration of the session to suppress header, column name, or
         // summary rows in the report output. You can also configure this via your ads.properties
@@ -187,12 +171,10 @@ public class DownloadCriteriaReportWithSelector {
                         .skipReportHeader(false)
                         .skipColumnHeader(false)
                         .skipReportSummary(false)
-                        // Enable to allow rows with zero impressions to show.
-                        .includeZeroImpressions(false)
+                        // Set to false to exclude rows with zero impressions.
+                        .includeZeroImpressions(true)
                         .build();
         session.setReportingConfiguration(reportingConfiguration);
-
-        reportDefinition.setSelector(selector);
 
         ReportDownloaderInterface reportDownloader
                 = adWordsServices.getUtility(session, ReportDownloaderInterface.class);
@@ -201,7 +183,7 @@ public class DownloadCriteriaReportWithSelector {
             // Set the property api.adwords.reportDownloadTimeout or call
             // ReportDownloader.setReportDownloadTimeout to set a timeout (in milliseconds)
             // for CONNECT and READ in report downloads.
-            ReportDownloadResponse response = reportDownloader.downloadReport(reportDefinition);
+            ReportDownloadResponse response = reportDownloader.downloadReport(query, DownloadFormat.CSV);
             response.saveToFile(reportFile);
 
             System.out.printf("Report successfully downloaded to: %s%n", reportFile);
